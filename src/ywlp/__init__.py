@@ -36,18 +36,18 @@ async def finding_restaurants_in_city():
     cfg = ConfigDict()
     url = 'https://www.yellowpages.com/new-york-ny/restaurants?s=average_rating'
     parsed_pages = 0
-    data = []
+    hotel_data = []
     logger = get_logger('yellow', 'DEBUG')
     async with async_playwright() as p:
         while url:
             doc = await navigator.get_doc(cfg, p, url, 'restaurants')
             headers = doc.xpath('//div[@class="search-results organic"]//div[@class="result"]//h2/a')
             for header in headers:
-                rr: List[HtmlElement] = header.getparent().getparent().xpath('//div[@class="ratings"]')
-                if 'data-tripadvisor' not in rr[0].attrib:
+                trip_adviser_data: List[HtmlElement] = header.getparent().getparent().xpath('//div[@class="ratings"]')
+                if 'data-tripadvisor' not in trip_adviser_data[0].attrib:
                     continue
-                d = json.loads(rr[0].attrib['data-tripadvisor'])
-                data.append({'name': header.text_content(), 'rating': d['rating'], 'count': d['count']})
+                d = json.loads(trip_adviser_data[0].attrib['data-tripadvisor'])
+                hotel_data.append({'name': header.text_content(), 'rating': d['rating'], 'count': d['count']})
             pages = doc.xpath('//a[@class="next ajax-page"]')
             try:
                 url = pages[0].attrib['href']
@@ -60,7 +60,7 @@ async def finding_restaurants_in_city():
                 url = None
     with open('output.csv', encoding='utf-8', mode='w') as f:
         writer = csv.DictWriter(f, ['name', 'rating', 'count'])
-        for d in data:
+        for d in hotel_data:
             writer.writerow(d)
 
 
