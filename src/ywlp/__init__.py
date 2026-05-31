@@ -2,10 +2,12 @@ import asyncio
 import csv
 import json
 from asyncio import sleep
+from typing import List
 
 import click
 import sqlite3
 
+from lxml.html import HtmlElement
 from playwright.async_api import async_playwright
 
 import navigator
@@ -13,6 +15,7 @@ import playwright
 import platformdirs
 
 from config_dict import ConfigDict
+from navigator import get_logger
 
 CATEGORIES = [
     'restaurants',
@@ -34,19 +37,21 @@ async def finding_restaurants_in_city():
     url = 'https://www.yellowpages.com/new-york-ny/restaurants?s=average_rating'
     parsed_pages = 0
     data = []
+    logger = get_logger('yellow', 'DEBUG')
     async with async_playwright() as p:
         while url:
             doc = await navigator.get_doc(cfg, p, url, 'restaurants')
             headers = doc.xpath('//div[@class="search-results organic"]//div[@class="result"]//h2/a')
             for header in headers:
-                rr = header.getparent().getparent().xpath('//div[@class="ratings"]')
+                rr: List[HtmlElement] = header.getparent().getparent().xpath('//div[@class="ratings"]')
+                if 'data-tripadvisor' not in rr[0].attrib:
+                    continue
                 d = json.loads(rr[0].attrib['data-tripadvisor'])
                 data.append({'name': header.text_content(), 'rating': d['rating'], 'count': d['count']})
             pages = doc.xpath('//a[@class="next ajax-page"]')
-            print([k for k in pages])
             try:
                 url = pages[0].attrib['href']
-                print(f"going to next url: {url}")
+                logger.info(f"going to next url: {url}")
                 await sleep(5)
                 parsed_pages += 1
                 if parsed_pages > 5:
