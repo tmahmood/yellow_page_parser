@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 ywlp_restaurants = "ywlp:find_restaurants_in_city"
+eventbrite = "event_brite:find_events_in_city"
 
 
 [build-system]

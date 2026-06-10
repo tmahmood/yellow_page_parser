@@ -62,6 +62,7 @@ class Navigator:
         self.__browser: Browser | None = None
         self.__current_page: Page | None = None
         self.__current_context: BrowserContext | None = None
+        self.__block_images: bool = True
 
     async def start(self, saved_session: Path | None = None, reset=False):
         """ Starts a browser"""
@@ -80,6 +81,18 @@ class Navigator:
         else:
             self.__lg.debug("using empty context")
             self.__current_context = await self.__browser.new_context()
+        if self.__block_images:
+            await self.__current_context.route(
+                "**/*.{png,jpg,jpeg,gif}", lambda route: route.abort()
+            )
+            await self.__current_page.route(
+                "**/*.{png,jpg,jpeg,gif}", lambda route: route.abort()
+            )
+        if self.__block_css:
+            await self.__current_context.route(
+                "**/*.{css}", lambda route: route.abort()
+            )
+            await self.__current_page.route("**/*.{css}", lambda route: route.abort())
         self.__current_page = await self.__current_context.new_page()
 
     def page(self):
@@ -97,9 +110,9 @@ class Navigator:
         except playwright.async_api.Error:
             return None
 
-    async def click(self, selector: str, timeout=None) -> bool:
+    async def click(self, selector: str, timeout=None, **kwargs) -> bool:
         try:
-            elm = await self.wait_for(selector, timeout=timeout)
+            elm = await self.wait_for(selector, timeout=timeout, **kwargs)
             await elm.click()
             self.__lg.debug(f"Clicked: {selector}")
             return True
